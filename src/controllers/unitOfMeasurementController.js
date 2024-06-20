@@ -9,17 +9,18 @@ exports.findAllUnitOFMeasurement = async (req,res) => {
     }
 }
 
-exports.findUnitOFMeasurementByName = async (unitName) => {
+exports.findUnitOFMeasurementByName = async (req, res) => {
+    const name = req.body.nameOfUnitOFMeasurement;
     try {
-        const unitOFMeasurement = await UnitOFMeasurement.findOne({ name: unitName });
-        return unitOFMeasurement;
+        const unitOFMeasurement = await UnitOFMeasurement.findOne({ name: name });
+        res.json(unitOFMeasurement);
     } catch (error) {
         console.error(error);
     }
 };
 
-exports.createUnitOFMeasurement = async (unitName) => {
-
+exports.createUnitOFMeasurement = async (req, res) => {
+    const unitName = req.body.name;
     const unitOFMeasurement = new UnitOFMeasurement({
         name: unitName,
     });

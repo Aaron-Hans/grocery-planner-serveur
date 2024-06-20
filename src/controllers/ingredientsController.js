@@ -1,71 +1,101 @@
 const Ingredients = require('../models/Ingredients');
 const UnitOfMeasurementController = require('./unitOfMeasurementController');
+const UnitOfMeasurement = require('../models/UnitOfMeasurement');
 
-exports.createIngredient = async(req, res) => {
+exports.createIngredient = async (req, res) => {
     const name = req.body.nameOfIngredient;
-    const unitName = req.body.nameOfUnitOFMeasurement;
-    //formatage du nom pour qu'il commence par une majuscule et soit le reste en minuscule
-    const newName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-    // Vérifier si l'unité de mesure existe déjà
-    let unit = await UnitOfMeasurementController.findUnitOFMeasurementByName(unitName);
-    // Création de l'unité si elle n'existe pas
-    if(unit == null){
-        let newUnit = await UnitOfMeasurementController.createUnitOFMeasurement(unitName)
-        unit = await UnitOfMeasurementController.findUnitOFMeasurementByName(newUnit);
-    }
-    // Créer l'ingrédient avec l'unité de mesure
-    const ingredients = new Ingredients({
-        name: newName,
-        unitOfMeasurement: unit._id,
-    });
+    const unitName = req.body.nameOfUnitOfMeasurement;
+
+    const formattedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+
+    let response = {
+        unit: null,
+        ingredient: null,
+        error: []
+    };
+
     try {
-        const newIngredient = await ingredients.save();
-        res.status(201).json(newIngredient);
+        let unit = await UnitOfMeasurement.findOne({ name: unitName });
+
+        if (!unit) {
+            try {
+                const newUnit = new UnitOfMeasurement({ name: unitName });
+                unit = await newUnit.save();
+                response.unit = unit;
+            } catch (error) {
+                if (error.name === 'ValidationError') {
+                    response.error.push({ unitError: error.message });
+                }
+                console.log("Erreur lors de la création de l'unité de mesure.");
+            }
+        }
+
+        const existingIngredient = await Ingredients.findOne({name: formattedName})
+        if (existingIngredient){
+            response.error.push({ ingredientError: "Un ingrédient avec ce nom existe déjà." });
+            res.status(400).json(response);
+            return;
+        }
+        const newIngredient = new Ingredients({
+            name: formattedName,
+            unitOfMeasurement: unit._id
+        });
+
+        const savedIngredient = await newIngredient.save();
+        response.ingredient = savedIngredient;
     } catch (error) {
         if (error.code === 11000) {
-            res.status(409).json({message: "Un ingrédient avec ce nom existe déjà."});
+            response.error.push({ ingredientError: "Un ingrédient avec ce nom existe déjà." });
         } else {
-            res.status(400).json({message: error.message});
+            response.error.push({ ingredientError: error.message });
         }
     }
-}
 
-exports.findAllIngredients = async (req,res) => {
-    try {
-        const allIngredients = await Ingredients.find()
-        res.json(allIngredients)
-    } catch (error) {
-        res.status.json({message: error.message})
+    if (response.error.length > 0) {
+        res.status(400).json(response);
+    } else {
+        res.status(201).json(response);
     }
-}
+};
 
-exports.findIngredientByName = async (req,res) => {
+exports.findAllIngredients = async (req, res) => {
+    try {
+        const allIngredients = await Ingredients.find();
+        res.json(allIngredients);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+exports.findIngredientByName = async (req, res) => {
     const name = req.body.nameOfIngredient;
 
     try {
-        const updateIngredient = await Ingredients.find({name : name})
-        res.json(updateIngredient)
-        
+        const ingredient = await Ingredients.findOne({ name: name });
+        res.json(ingredient);
     } catch (error) {
-        console.error(error.message)
+        console.error(error.message);
+    }
+};
+
+exports.updateIngredient = async (req, res) => {
+    const name = req.body.nameOfIngredient;
+    const unitName = req.body.nameOfUnitOfMeasurement;
+
+    const newName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+
+    let unit = await UnitOfMeasurementController.findUnitOfMeasurementByName(unitName);
+
+    if (!unit) {
+        unit = await UnitOfMeasurementController.createUnitOfMeasurement(unitName);
+        unit = await UnitOfMeasurementController.findUnitOfMeasurementByName(unitName);
     }
 
-}
+    const ingredient = await Ingredients.findOne({ name: newName });
 
-exports.updateIngredient = async (req,res) => {
-    const name = req.body.nameOfIngredient
-    const unitName = req.body.nameOfUnitOFMeasurement;
-
-        //formatage du nom pour qu'il commence par une majuscule et soit le reste en minuscule
-        const newName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-        // Vérifier si l'unité de mesure existe déjà
-        let unit = await UnitOfMeasurementController.findUnitOFMeasurementByName(unitName);
-        // Création de l'unité si elle n'existe pas
-        if(unit == null){
-            let newUnit = await UnitOfMeasurementController.createUnitOFMeasurement(unitName)
-            unit = await UnitOfMeasurementController.findUnitOFMeasurementByName(newUnit);
-        }
-
-        const ingredient = Ingredients.find({name: newName})
-        res.json(Ingredients.updateOne(ingredient))
-}
+    if (ingredient) {
+        res.json(await Ingredients.updateOne({ _id: ingredient._id }, { $set: { unitOfMeasurement: unit._id } }));
+    } else {
+        res.status(404).json({ message: "Ingrédient non trouvé." });
+    }
+};
