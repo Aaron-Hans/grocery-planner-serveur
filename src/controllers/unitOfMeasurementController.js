@@ -19,14 +19,10 @@ exports.findUnitOFMeasurementByName = async (req, res) => {
     }
 };
 
-exports.createUnitOFMeasurement = async (req, res) => {
-    const unitName = req.body.name;
-    const unitOFMeasurement = new UnitOFMeasurement({
-        name: unitName,
-    });
-
+exports.createUnitOFMeasurement = async (unitName) => {
+    const newUnit = new UnitOFMeasurement({ name: unitName });
     try{
-        const newUnitOFMeasurement = await unitOFMeasurement.save();
+        const newUnitOFMeasurement = await newUnit.save();
         return newUnitOFMeasurement
     } catch (error) {
         if(error.name == 'ValidationError'){
