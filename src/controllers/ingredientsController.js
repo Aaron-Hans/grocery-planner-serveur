@@ -4,7 +4,9 @@ const UnitOfMeasurement = require('../models/UnitOfMeasurement');
 
 exports.createIngredient = async (req, res) => {
     const name = req.body.nameOfIngredient;
-    const unitName = req.body.nameOfUnitOfMeasurement;
+    let unitName = req.body.nameOfUnitOfMeasurement;
+
+    console.log(unitName)
 
     const formattedName = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 
@@ -15,21 +17,23 @@ exports.createIngredient = async (req, res) => {
     };
 
     try {
-        let unit = await UnitOfMeasurement.findOne({ name: unitName });
+        if(!unitName){
+            unitName = null;
+        } 
+        const unit = await UnitOfMeasurement.findOne({ name: unitName });
 
-        if (!unit) {
-            try {
-                const newUnit = new UnitOfMeasurement({ name: unitName });
-                unit = await newUnit.save();
-                response.unit = unit;
-            } catch (error) {
-                if (error.name === 'ValidationError') {
-                    response.error.push({ unitError: error.message });
+            if (!unit) {
+                try {
+                    const newUnit = new UnitOfMeasurement({ name: unitName });
+                    unit = await newUnit.save();
+                    response.unit = unit;
+                } catch (error) {
+                    if (error.name === 'ValidationError') {
+                        response.error.push({ unitError: error.message });
+                    }
+                    console.log("Erreur lors de la création de l'unité de mesure.");
                 }
-                console.log("Erreur lors de la création de l'unité de mesure.");
             }
-        }
-
         const existingIngredient = await Ingredients.findOne({name: formattedName})
         if (existingIngredient){
             response.error.push({ ingredientError: "Un ingrédient avec ce nom existe déjà." });

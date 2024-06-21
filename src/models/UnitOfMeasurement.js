@@ -5,7 +5,7 @@ const UnitOfMeasurementSchema = new Schema ({
     name: {
         type: String,
         enum: {
-            values: ['Kg', 'g', 'L', 'ml', 'cl', 'nbr',null],
+            values: ['Kg', 'g', 'L', 'ml', 'cl', 'nbr'],
             message: "l'unité {VALUE} n'existte pas"
         },
     },
